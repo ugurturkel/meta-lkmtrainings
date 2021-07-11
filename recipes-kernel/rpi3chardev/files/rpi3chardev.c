@@ -4,6 +4,7 @@
 #include <linux/kernel.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h> 
+#include <linux/mutex.h>
 
 MODULE_LICENSE("GPL");            
 MODULE_AUTHOR("Ugur Turkel");    
@@ -23,6 +24,8 @@ static int cdev_release(struct inode* inodeptr, struct file* fileptr);
 static ssize_t cdev_read(struct file* fileptr, char __user* buffer, size_t msgLength, loff_t* offset);
 static ssize_t cdev_write(struct file* fileptr, const char __user* buffer, size_t msgLength, loff_t* offset);
 
+static DEFINE_MUTEX(rpi3chardev_mutex);
+
 static struct file_operations fops =
 {
 	.open = cdev_open,
@@ -33,6 +36,7 @@ static struct file_operations fops =
 
 static int __init rpi3chardev_init(void)
 {
+	mutex_init(&rpi3chardev_mutex);
 	printk(KERN_INFO "rpi3chardev: Initializing...\n");
 
 	majorNumber = register_chrdev(0, "rpi3chardev", &fops);
@@ -73,6 +77,7 @@ static int __init rpi3chardev_init(void)
 
 static void __exit rpi3chardev_exit(void)
 {
+	mutex_destroy(&rpi3chardev_mutex);
 	device_destroy(rpi3chardevClass, MKDEV(majorNumber, 0));
 	class_unregister(rpi3chardevClass);                          
 	class_destroy(rpi3chardevClass);                             
@@ -108,15 +113,24 @@ static ssize_t cdev_write(struct file* fileptr, const char __user* buffer, size_
 
 static int cdev_release(struct inode *inodeptr, struct file* fileptr)
 {
+	mutex_unlock(&rpi3chardev_mutex);
 	printk(KERN_INFO "rpi3chardev: closed the device.\n");
 	return 0;
 }
 
 static int cdev_open(struct inode* inodeptr, struct file* fileptr)
 {
+	if(!mutex_trylock(&rpi3chardev_mutex))
+	{                            
+		printk(KERN_ALERT "rpi3chardev: device is in use by another process");
+		return -EBUSY;
+	}
+	else
+	{
 	openedCounter++;
 	printk(KERN_INFO "rpi3chardev: device opened %d times.\n", openedCounter);
 	return 0;
+	}
 }
 
 module_init(rpi3chardev_init);
