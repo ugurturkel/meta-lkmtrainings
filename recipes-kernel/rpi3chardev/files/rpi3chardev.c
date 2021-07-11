@@ -28,10 +28,18 @@ static DEFINE_MUTEX(rpi3chardev_mutex);
 
 static struct file_operations fops =
 {
+	/*
 	.open = cdev_open,
 	.read =  cdev_read,
 	.write = cdev_write,
-	.release = cdev_release,
+	.release = cdev_release
+	*/
+
+	//modern way to assign functions
+	open: cdev_open,
+	read: cdev_read,
+	write: cdev_write,
+	release: cdev_release
 };
 
 static int __init rpi3chardev_init(void)
