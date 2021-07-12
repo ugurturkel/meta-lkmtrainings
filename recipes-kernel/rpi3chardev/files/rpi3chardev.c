@@ -39,7 +39,7 @@ static struct file_operations fops =
 	open: cdev_open,
 	read: cdev_read,
 	write: cdev_write,
-	release: cdev_release
+	release: cdev_release, // termination block, leave comma end of the last entry
 };
 
 static int __init rpi3chardev_init(void)
