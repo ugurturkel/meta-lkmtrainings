@@ -36,6 +36,7 @@ static struct file_operations fops =
 	*/
 
 	//modern way to assign functions
+	owner: THIS_MODULE, //prevents the module to get unloaded when it is in operation 
 	open: cdev_open,
 	read: cdev_read,
 	write: cdev_write,
@@ -61,9 +62,9 @@ static int __init rpi3chardev_init(void)
 
 	if (IS_ERR(rpi3chardevClass) == 1)
 	{
-      unregister_chrdev(majorNumber, "rpi3chardev");
-      printk(KERN_ALERT "registering device class is failed.\n");
-      return PTR_ERR(rpi3chardevClass);
+		unregister_chrdev(majorNumber, "rpi3chardev");
+		printk(KERN_ALERT "registering device class is failed.\n");
+		return PTR_ERR(rpi3chardevClass);
 	}
 
 	printk(KERN_INFO "rpi3chardev: registered the device.\n");
@@ -101,13 +102,13 @@ static ssize_t cdev_read(struct file* fileptr, char __user* buffer, size_t msgLe
 
 	if (errorCounter == 0)
 	{
-      printk(KERN_INFO "rpi3chardev: Sent %d characters to the user\n", usrMsgSize);
-      return (usrMsgSize = 0);
+		printk(KERN_INFO "rpi3chardev: Sent %d characters to the user\n", usrMsgSize);
+		return (usrMsgSize = 0);
 	}
 	else 
 	{
-      printk(KERN_INFO "rpi3chardev: Failed to send %d characters.\n", errorCounter);
-      return -EFAULT;
+		printk(KERN_INFO "rpi3chardev: Failed to send %d characters.\n", errorCounter);
+		return -EFAULT;
 	}
 }
 
@@ -135,9 +136,9 @@ static int cdev_open(struct inode* inodeptr, struct file* fileptr)
 	}
 	else
 	{
-	openedCounter++;
-	printk(KERN_INFO "rpi3chardev: device opened %d times.\n", openedCounter);
-	return 0;
+		openedCounter++;
+		printk(KERN_INFO "rpi3chardev: device opened %d times.\n", openedCounter);
+		return 0;
 	}
 }
 
