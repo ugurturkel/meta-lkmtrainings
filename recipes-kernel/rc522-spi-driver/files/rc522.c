@@ -303,7 +303,7 @@ static int rc522_request_card(struct rc522_info *info, struct rc522_ioc_transfer
 		for(i=0; i < rx_len_bit/8; i ++){
 			printk(KERN_INFO "RC522-Driver: 0x%02x, " ,  rx_buf[i]);	
 		}
-		printk(KERN_ERR "RC522 Driver: failed to request card : end\n");	
+		printk(KERN_ERR "RC522 Driver: failed to request card : end\n");
    	}
 	return status;
 } 
@@ -1137,7 +1137,7 @@ static int rc522_open(struct inode *inode, struct file *filp)
 		filp->private_data = info;
 		nonseekable_open(inode, filp);
 	} else 
-		pr_debug("rc522: nothing for minor %d\n", iminor(inode));
+		printk(KERN_ERR "RC522 Driver: nothing for minor %d\n", iminor(inode));
 	mutex_unlock(&device_list_lock);
 
 	return ret;
@@ -1345,11 +1345,11 @@ static int rc522_remove(struct spi_device *spi_dev)
 
 /***** spi board info and spi driver structure ****/
 static struct spi_board_info rc522_spi_board_info = {
-	modalias: SPI_DEVICE_NAME,	/* rc522 != spidev*/
+	modalias: SPI_DEVICE_NAME,
 	//irq: IRQ_EINT4,
 	max_speed_hz: 400000,
 	bus_num: 1, //use spi1 in raspberry pi 3, must add "dtoverlay=spi1-1cs, cs0_spidev=disabled" to config.txt
-	chip_select: 0,
+	chip_select: 0, //CS0, GPIO8 on raspberry pi 3
 	mode: SPI_MODE_0,
 };
 static struct spi_driver rc522_spi_driver = {
