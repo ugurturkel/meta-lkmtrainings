@@ -161,17 +161,17 @@
 		? ((N)*(sizeof (struct rc522_ioc_transfer))) : 0)
 #define SPI_IOC_MESSAGE(N) 			_IOW(SPI_IOC_MAGIC, 0, char[SPI_MSGSIZE(N)])
 
-#define SPI_IOC_RD_MODE				_IOR(SPI_IOC_MAGIC, 1, __u8)
-#define SPI_IOC_WR_MODE				_IOW(SPI_IOC_MAGIC, 1, __u8)
+#define SPI_IOC_RD_MODE				_IOR(SPI_IOC_MAGIC, 1, uint8_t)
+#define SPI_IOC_WR_MODE				_IOW(SPI_IOC_MAGIC, 1, uint8_t)
 
-#define SPI_IOC_RD_LSB_FIRST		_IOR(SPI_IOC_MAGIC, 2, __u8)
-#define SPI_IOC_WR_LSB_FIRST		_IOW(SPI_IOC_MAGIC, 2, __u8)
+#define SPI_IOC_RD_LSB_FIRST		_IOR(SPI_IOC_MAGIC, 2, uint8_t)
+#define SPI_IOC_WR_LSB_FIRST		_IOW(SPI_IOC_MAGIC, 2, uint8_t)
 
-#define SPI_IOC_RD_BITS_PER_WORD	_IOR(SPI_IOC_MAGIC, 3, __u8)
-#define SPI_IOC_WR_BITS_PER_WORD	_IOW(SPI_IOC_MAGIC, 3, __u8)
+#define SPI_IOC_RD_BITS_PER_WORD	_IOR(SPI_IOC_MAGIC, 3, uint8_t)
+#define SPI_IOC_WR_BITS_PER_WORD	_IOW(SPI_IOC_MAGIC, 3, uint8_t)
 
-#define SPI_IOC_RD_MAX_SPEED_HZ		_IOR(SPI_IOC_MAGIC, 4, __u32)
-#define SPI_IOC_WR_MAX_SPEED_HZ		_IOW(SPI_IOC_MAGIC, 4, __u32)
+#define SPI_IOC_RD_MAX_SPEED_HZ		_IOR(SPI_IOC_MAGIC, 4, uint32_t)
+#define SPI_IOC_WR_MAX_SPEED_HZ		_IOW(SPI_IOC_MAGIC, 4, uint32_t)
 
 
 #define SPI_MODE_MASK		(SPI_CPHA | SPI_CPOL | SPI_CS_HIGH \
@@ -248,11 +248,11 @@ enum rc522_sect_lock {
 };
 
 struct rc522_ioc_transfer {
-	__u32	speed_hz;
-	__u32	pad;
-	__u16	delay_usecs;
-	__u8	bits_per_word;
-	__u8	cs_change;
+	uint32_t	speed_hz;
+	uint32_t	pad;
+	uint16_t	delay_usecs;
+	uint8_t	bits_per_word;
+	uint8_t	cs_change;
 
 	enum rc522_ioc_type ioc_type;	/* io ctrl cmd : req, read, write... */
 	enum rc522_key_type key_type;	/* key type: key a, key b, key a and b */
@@ -262,12 +262,12 @@ struct rc522_ioc_transfer {
 
 	enum rc522_sect_lock sect_lock;	/* sect lock: 0=lock, 1=unlock */
 	
-	__u8	keya_buf[CARD_KEYA_SIZE];	/*key a space: 6 Bytes*/
-	__u8	ctrl_buf[CARD_CTRL_SIZE];	/*ctrl space: 4 Bytes*/
-	__u8	keyb_buf[CARD_KEYB_SIZE];	/*key b space: 6 Bytes*/
+	uint8_t	keya_buf[CARD_KEYA_SIZE];	/*key a space: 6 Bytes*/
+	uint8_t	ctrl_buf[CARD_CTRL_SIZE];	/*ctrl space: 4 Bytes*/
+	uint8_t	keyb_buf[CARD_KEYB_SIZE];	/*key b space: 6 Bytes*/
 	
-	__u8	id_buf[CARD_ID_SIZE];	/*id space: 4Bytes for auth card*/
-	__u8	txrx_buf[CARD_BLK_SIZE + CARD_PLUS_SIZE]; /*w, r space: 16 + 4 Bytes*/
+	uint8_t	id_buf[CARD_ID_SIZE];	/*id space: 4Bytes for auth card*/
+	uint8_t	txrx_buf[CARD_BLK_SIZE + CARD_PLUS_SIZE]; /*w, r space: 16 + 4 Bytes*/
 	
 };
 
@@ -287,8 +287,8 @@ struct rc522_info{
 	spinlock_t		spi_lock;
 	struct mutex	buf_lock;
 
-	u8			tx_buffer[INFO_BUFFER_SIZE];
-	u8			rx_buffer[INFO_BUFFER_SIZE];
+	uint8_t			tx_buffer[INFO_BUFFER_SIZE];
+	uint8_t			rx_buffer[INFO_BUFFER_SIZE];
 };
 
 static long rc522_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);

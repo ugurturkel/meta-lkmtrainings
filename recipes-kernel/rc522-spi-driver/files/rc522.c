@@ -45,7 +45,7 @@ static int rc522_write_reg (struct rc522_info *info, unsigned char reg, unsigned
 {
 	int ret;
 	unsigned char tx_buf[4];
-	tx_buf[0] = (reg << 1) & 0x7e;
+	tx_buf[0] = (reg << 1) & 0x7E;
 	tx_buf[1] = value;
 	ret = spi_write(info->spi_dev, tx_buf, 2);
 	if (ret)
@@ -57,7 +57,7 @@ static int rc522_read_reg (struct rc522_info *info, unsigned char reg,unsigned c
 	unsigned char tx_buf[4];
 	unsigned char rx_buf[4];
 	int ret;
-	tx_buf[0] = (reg << 1) & 0x7e | 0x80;
+	tx_buf[0] = ((reg << 1) & 0x7E) | 0x80;
 	ret = spi_write_then_read(info->spi_dev, tx_buf, 1, rx_buf, 1);
 	if (ret)
 		printk(KERN_ERR "RC522 Driver: failed to read reg: addr=0x%02x, value=0x%02x, ret = %d\n", reg, *value, ret);
@@ -69,7 +69,7 @@ static int rc522_write_buf(struct rc522_info *info, unsigned char reg, unsigned 
 {
 	int ret;
 	unsigned char tx_buf[INFO_BUFFER_SIZE + 1];
-	tx_buf[0] = (reg << 1) & 0x7e;
+	tx_buf[0] = (reg << 1) & 0x7E;
 	memcpy(&tx_buf[1], buf, len);
 	ret = spi_write(info->spi_dev, tx_buf, len+1);
 	if (ret)
@@ -80,14 +80,16 @@ static int rc522_write_buf(struct rc522_info *info, unsigned char reg, unsigned 
 static int rc522_read_buf(struct rc522_info *info, unsigned char reg, unsigned char *buf, unsigned char len)
 {
 	struct spi_message	message;
-	u8 tx_buf[32] = {0}; //u8 means its 1 byte unsigned integer, same as uint8_t
+	uint8_t tx_buf[32] = {0}; 
 	int ret;
-	tx_buf[0] = (reg << 1) & 0x7e | 0x80;
+	tx_buf[0] = ((reg << 1) & 0x7E) | 0x80;
+	
 	struct spi_transfer	xfer = {
 		tx_buf: tx_buf,
 		rx_buf: buf,
 		len: len,
 	};
+	
 	memset(&tx_buf[1], tx_buf[0], len-1);
 	spi_message_init(&message);
 	spi_message_add_tail(&xfer, &message);
@@ -112,8 +114,6 @@ static int rc522_clear_bitmask (struct rc522_info *info, unsigned char reg, unsi
 	rc522_write_reg(info, reg, tmp & ~mask);
 	return ret;
 }
-
-
 
 /***** rc522 help function *****/
 static int rc522_reset_chip(struct rc522_info *info)
@@ -150,14 +150,14 @@ static int rc522_config_isotype(struct rc522_info *info, unsigned char type)
 		rc522_clear_bitmask(info,STATUS2_REG, 0x08);
 		rc522_write_reg(info, MODE_REG, 0x3D);
 		rc522_write_reg(info, RX_SEL_REG, 0x86);
-		rc522_write_reg(info, RF_CFG_REG, 0x7f);
+		rc522_write_reg(info, RF_CFG_REG, 0x7F);
 		rc522_write_reg(info, T_RELOAD_REG_L, 30);
 		rc522_write_reg(info, T_RELOAD_REG_H, 0);
 		rc522_write_reg(info, T_MODE_REG, 0x8D);
 		rc522_write_reg(info, T_PRESCALER_REG, 0x3E);
 		rc522_enable_antenna(info);
 	}else{
-		printk(KERN_ERR "RC522 Driver: failed to support iso type");
+		printk(KERN_ERR "RC522 Driver: ISO type is not supported.");
 		return MI_ERR;
 	}
 	return ret;
@@ -176,7 +176,7 @@ static int rc522_init_chip(struct rc522_info *info)
 
 
 /***** rc522 card ops function *****/
-static int rc522_com_card(struct rc522_info *info, unsigned char cmd, unsigned char *tx_buf, unsigned char tx_len, unsigned char *rx_buf,unsigned int  *rx_len_bit)
+static int rc522_com_card(struct rc522_info *info, unsigned char cmd, unsigned char *tx_buf, unsigned char tx_len, unsigned char *rx_buf, unsigned int  *rx_len_bit)
 {
 	unsigned char irq_en        = 0x00;
 	unsigned char wait_for      = 0x00;
@@ -185,7 +185,7 @@ static int rc522_com_card(struct rc522_info *info, unsigned char cmd, unsigned c
 	unsigned char com_irq_reg   = 0x00;
 	unsigned int  i;
 	unsigned long long cur_usec,last_usec;
-	int status = MI_ERR ;
+	int status = MI_ERR;
 	switch(cmd){
 	case PCD_AUTHENT:
 		irq_en = 0x12;
@@ -395,8 +395,8 @@ static int rc522_auth_key(struct rc522_info *info, struct rc522_ioc_transfer *xf
 	status = rc522_com_card(info, PCD_AUTHENT, tx_buf, 2 + CARD_KEYA_SIZE + CARD_ID_SIZE, rx_buf, &rx_len_bit);
 	rc522_read_reg(info, STATUS2_REG, &reg_val);
 	if((status != MI_OK) || (!(reg_val & 0x08))){
-		printk(KERN_ERR "RC522 Driver: failed to auth card: key type=0x%02x,status=%d\n", tx_buf[0], status);	
-		printk(KERN_ERR "RC522 Driver: failed to auth card: end\n");
+		printk(KERN_ERR "RC522 Driver: could not authorized the card: key type=0x%02x,status=%d\n", tx_buf[0], status);	
+		printk(KERN_ERR "RC522 Driver: could not authorized the card: end\n");
         status = MI_ERR;
 	}
 	return status;
@@ -650,25 +650,25 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		break;
 	case RC522_IOC_INIT_CHIP:
 		if(info->users >= 2){
-			printk(KERN_ERR "RC522 Driver: failed to init chip: \n");
+			printk(KERN_ERR "RC522 Driver: failed to init chip.\n");
 			ret = -EBUSY;
 			break;
 		}
 		ret = rc522_init_chip(info);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to init chip: \n");
+			printk(KERN_ERR "RC522 Driver: failed to init chip.\n");
 			ret = -ENODEV;
 		}
 		break;
 	case RC522_IOC_HALT_CHIP:
 		if(info->users >= 2){
-			printk(KERN_ERR "RC522 Driver: failed to init chip: \n");
+			printk(KERN_ERR "RC522 Driver: failed to init chip.\n");
 			ret = -EBUSY;
 			break;
 		}
 		ret = rc522_halt_chip(info);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to halt chip: \n");
+			printk(KERN_ERR "RC522 Driver: failed to halt chip.\n");
 			ret = -ENODEV;
 		}
 		break;
@@ -723,7 +723,7 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
@@ -745,7 +745,7 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
@@ -771,7 +771,7 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
@@ -796,13 +796,13 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
 		ret = rc522_read_keya(info,xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to read key a\n");
+			printk(KERN_ERR "RC522 Driver: failed to read key A\n");
 			ret = -EINVAL;
 		}
 		break;
@@ -817,12 +817,12 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
 		ret = rc522_read_keyb(info,xfer);
-		if(ret){printk(KERN_ERR "RC522 Driver: failed to read key b\n");
+		if(ret){printk(KERN_ERR "RC522 Driver: failed to read key B\n");
 			ret = -EINVAL;
 		}
 		break;
@@ -837,13 +837,13 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
 		ret = rc522_read_ctrl(info,xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to read key a\n");
+			printk(KERN_ERR "RC522 Driver: failed to read key A\n");
 			ret = -EINVAL;
 		}
 		break;
@@ -870,13 +870,13 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
 		ret = rc522_write_keya(info,xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to write key b\n");
+			printk(KERN_ERR "RC522 Driver: failed to write key B\n");
 			ret = -EINVAL;
 		}
 		break;
@@ -897,13 +897,13 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
 		ret = rc522_write_keyb(info,xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to write key b\n");
+			printk(KERN_ERR "RC522 Driver: failed to write key B\n");
 			ret = -EINVAL;
 		}
 		break;
@@ -925,7 +925,7 @@ static int rc522_pass_op(struct rc522_info *info, struct  rc522_ioc_transfer *xf
 		memset(info->rx_buffer, 0x00, INFO_BUFFER_SIZE);
 		ret = rc522_auth_card(info, xfer);
 		if(ret){
-			printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+			printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 			ret = -EINVAL;
 			break;
 		}
@@ -952,7 +952,7 @@ static long rc522_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	struct spi_device	*spi_dev;
 	struct rc522_ioc_transfer	*xfer;
 	unsigned		n_transfer;
-	u32	tmp = 0, offset = 0, len = 0;
+	int	tmp = 0, offset = 0, len = 0;
 	int	err = 0, ret = 0;
 	
 	if (_IOC_TYPE(cmd) != SPI_IOC_MAGIC){
@@ -1028,7 +1028,7 @@ static long rc522_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 					//len = tmp;
 					len = CARD_ID_SIZE + CARD_BLK_SIZE + CARD_PLUS_SIZE;
 					offset = (tmp - len);	
-					if(__copy_to_user((u8 __user *)(arg)+offset, ((u8 *)xfer) + offset, len )){
+					if(__copy_to_user((uint8_t __user *)(arg)+offset, ((uint8_t *)xfer) + offset, len )){
 						printk(KERN_ERR "RC522 Driver: failed to copy k space to u space: \n");
 						ret = -EFAULT;
 					}
@@ -1043,27 +1043,27 @@ static long rc522_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	/***** spi inferface mode set *****/
 	case SPI_IOC_RD_MODE:
-		ret = __put_user(spi_dev->mode & SPI_MODE_MASK,(__u8 __user *)arg);
+		ret = __put_user(spi_dev->mode & SPI_MODE_MASK,(uint8_t __user *)arg); //u8 means its 1 byte unsigned integer, same as uint8_t
 		break;
 	case SPI_IOC_RD_LSB_FIRST:
-		ret = __put_user((spi_dev->mode & SPI_LSB_FIRST) ?  1 : 0,(__u8 __user *)arg);
+		ret = __put_user((spi_dev->mode & SPI_LSB_FIRST) ?  1 : 0,(uint8_t __user *)arg);
 		break;
 	case SPI_IOC_RD_BITS_PER_WORD:
-		ret = __put_user(spi_dev->bits_per_word, (__u8 __user *)arg);
+		ret = __put_user(spi_dev->bits_per_word, (uint8_t __user *)arg);
 		break;
 	case SPI_IOC_RD_MAX_SPEED_HZ:
-		ret = __put_user(spi_dev->max_speed_hz, (__u32 __user *)arg);
+		ret = __put_user(spi_dev->max_speed_hz, (int __user *)arg);
 		break;
 	case SPI_IOC_WR_MODE:
-		ret = __get_user(tmp, (u8 __user *)arg);
+		ret = __get_user(tmp, (uint8_t __user *)arg);
 		if (ret == 0) {
-			u8	save = spi_dev->mode;
+			uint8_t	save = spi_dev->mode;
 			if (tmp & ~SPI_MODE_MASK) {
 				ret = -EINVAL;
 				break;
 			}
 			tmp |= spi_dev->mode & ~SPI_MODE_MASK;
-			spi_dev->mode = (u8)tmp;
+			spi_dev->mode = (uint8_t)tmp;
 			ret = spi_setup(spi_dev);
 			if (ret < 0) 
 				spi_dev->mode = save;
@@ -1072,9 +1072,9 @@ static long rc522_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	case SPI_IOC_WR_LSB_FIRST:
-		ret = __get_user(tmp, (__u8 __user *)arg);
+		ret = __get_user(tmp, (uint8_t __user *)arg);
 		if (ret == 0) {
-			u8	save = spi_dev->mode;
+			uint8_t	save = spi_dev->mode;
 			if (tmp)
 				spi_dev->mode |= SPI_LSB_FIRST;
 			else 
@@ -1087,9 +1087,9 @@ static long rc522_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	case SPI_IOC_WR_BITS_PER_WORD:
-		ret = __get_user(tmp, (__u8 __user *)arg);
+		ret = __get_user(tmp, (uint8_t __user *)arg);
 		if (ret == 0) {
-			u8	save = spi_dev->bits_per_word;
+			uint8_t	save = spi_dev->bits_per_word;
 			spi_dev->bits_per_word = tmp;
 			ret = spi_setup(spi_dev);
 			if (ret < 0) 
@@ -1099,9 +1099,9 @@ static long rc522_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	case SPI_IOC_WR_MAX_SPEED_HZ:
-		ret = __get_user(tmp, (__u32 __user *)arg);
+		ret = __get_user(tmp, (int __user *)arg);
 		if (ret == 0) {
-			u32	save = spi_dev->max_speed_hz;
+			int	save = spi_dev->max_speed_hz;
 			spi_dev->max_speed_hz = tmp;
 			ret = spi_setup(spi_dev);
 			if (ret < 0) 
@@ -1175,8 +1175,8 @@ void rc522_test_card(struct rc522_info *info)
 		blk_num: RC522_BLK_0,
 	};
 	for(i = 0; i<CARD_KEYA_SIZE; i++){
-		xfer.keya_buf[i] = (u8)0xff;
-		xfer.keyb_buf[i] = (u8)0xff;
+		xfer.keya_buf[i] = (uint8_t)0xff;
+		xfer.keyb_buf[i] = (uint8_t)0xff;
 	}
 	while(i--){
 		ret = rc522_request_card(info, &xfer);
@@ -1220,7 +1220,7 @@ void rc522_test_card(struct rc522_info *info)
 	printk(KERN_INFO "RC522 Driver: 1 Read Card:");
 	ret = rc522_auth_card(info, &xfer);
 	if(ret ){ 
-		printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+		printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 	}else{ 
 		printk(KERN_INFO "RC522 Driver: good to auth card: \n");}
 	ret = rc522_read_card(info, &xfer);
@@ -1260,7 +1260,7 @@ void rc522_test_card(struct rc522_info *info)
 	printk(KERN_INFO "RC522 Driver: 2 Read Card:");
 	ret = rc522_auth_card(info, &xfer);
 	if(ret){ 
-		printk(KERN_ERR "RC522 Driver: failed to auth card\n");
+		printk(KERN_ERR "RC522 Driver: could not authorized the card.\n");
 	}
 	else{
 		printk(KERN_INFO "RC522 Driver: good to auth card: \n");}
@@ -1270,10 +1270,10 @@ void rc522_test_card(struct rc522_info *info)
 	}
 	else{
 		printk(KERN_INFO "RC522 Driver: good to read card: ");
-		printk(KERN_INFO "RC522 Driver: sect=0x%02x, blk=0x%02x\n",xfer.sect_num, xfer.blk_num );
+		printk(KERN_INFO "RC522 Driver: sect=0x%02x, blk=0x%02x\n",xfer.sect_num, xfer.blk_num);
 		for(i = 0; i< CARD_BLK_SIZE+CARD_PLUS_SIZE; i++){
 			if(i%4 == 0) printk(KERN_INFO "RC522 Driver: \n");
-			printk(KERN_INFO "RC522 Driver: 0x%02x	",xfer.txrx_buf[i] );
+			printk(KERN_INFO "RC522 Driver: 0x%02x	",xfer.txrx_buf[i]);
 		}
 		printk(KERN_INFO "RC522 Driver: \n");
 	}
@@ -1288,7 +1288,7 @@ static int rc522_probe(struct spi_device *spi_dev)
 	int ret;
 	info = kzalloc(sizeof(struct rc522_info), GFP_KERNEL);
 	if (info == NULL) {
-		printk(KERN_ERR "RC522 Driver: failed to allocate struct rc522_info{}\n");
+		printk(KERN_ERR "RC522 Driver: failed to allocate struct.\n");
 		return -ENOMEM;
 	}
 	info->spi_dev = spi_dev;
@@ -1303,13 +1303,13 @@ static int rc522_probe(struct spi_device *spi_dev)
 		info->devt = MKDEV(SPICHAR_MAJOR, minor);
 		dev = device_create(rc522_class, &spi_dev->dev, info->devt, info, "rc522-%d.%d",spi_dev->master->bus_num, spi_dev->chip_select);
 		 if(IS_ERR(dev)){
-			printk(KERN_ERR "RC522 Driver: failed to create device \n");
+			printk(KERN_ERR "RC522 Driver: failed to create device.\n");
 			ret = IS_ERR(dev);
 			goto exit_1;
 		 }
 	} 
 	else {
-		printk(KERN_ERR "RC522 Driver: failed to allocate minor number \n");
+		printk(KERN_ERR "RC522 Driver: failed to allocate minor number.\n");
 		ret = -ENODEV;
 		goto exit_1;
 	}
@@ -1327,7 +1327,7 @@ static int rc522_probe(struct spi_device *spi_dev)
 
 static int rc522_remove(struct spi_device *spi_dev)
 {
-	printk(KERN_INFO "RC522 Driver: rc522_remove()\n");
+	printk(KERN_INFO "RC522 Driver: removing RC522.\n");
 	struct rc522_info *info = spi_get_drvdata(spi_dev);
 	if(info == NULL) return 0;
 	spin_lock_irq(&info->spi_lock);
@@ -1363,17 +1363,16 @@ static struct spi_driver rc522_spi_driver = {
 
 static int __init rc522_init(void)
 {	
-	printk(KERN_INFO "RC522 Driver: rc522_init()\n");
 	int ret;
 	BUILD_BUG_ON(N_SPI_MINORS > 256);
 	ret = register_chrdev(SPICHAR_MAJOR, SPI_DEVICE_NAME, &rc522_fops);
 	if (ret < 0){
-		printk(KERN_ERR"failed to register char device\n");
+		printk(KERN_ERR"RC522 Driver: failed to register char device\n");
 		return ret;
 	}
 	rc522_class = class_create(THIS_MODULE, SPI_DEVICE_NAME);
 	if (IS_ERR(rc522_class)) {
-		printk(KERN_ERR "failed to create class\n");
+		printk(KERN_ERR "RC522 Driver: failed to create class\n");
 		ret = PTR_ERR(rc522_class);
 		goto exit_1;
 	}
@@ -1385,22 +1384,22 @@ static int __init rc522_init(void)
 	*****/
 	master = spi_busnum_to_master(rc522_spi_board_info.bus_num);
 	if(IS_ERR(master)){
-		printk(KERN_ERR "failed to find spi master \n");
+		printk(KERN_ERR "RC522 Driver: failed to find spi master \n");
 		ret = PTR_ERR(rc522_class);
 		goto exit_2;
 	}
 	spi = spi_new_device(master, &rc522_spi_board_info);
 	if(IS_ERR(master)){
-		printk(KERN_ERR "failed to create spi device \n");
+		printk(KERN_ERR "RC522 Driver: failed to create spi device \n");
 		ret = PTR_ERR(rc522_class);
 		goto exit_3;
 	}
-	/***** end *****/
 	ret = spi_register_driver(&rc522_spi_driver);
 	if (ret < 0) {
-		printk(KERN_ERR "failed to register spi driver\n");
+		printk(KERN_ERR "RC522 Driver: failed to register spi driver\n");
 		goto exit_4;
 	}
+	printk(KERN_INFO "RC522 Driver: RC522 Driver module is loaded.\n");
 	return 0;
 
 	exit_4:
@@ -1417,14 +1416,12 @@ static int __init rc522_init(void)
 }
 static void __exit rc522_exit(void)
 {
-	printk(KERN_INFO "RC522 Driver: rc522_exit()\n");
 	spi_unregister_driver(&rc522_spi_driver);
-	if(spi != NULL) 
-		spi_unregister_device(spi);
-	if(master != NULL) 
-		put_device(&master->dev);
+	if(spi != NULL) spi_unregister_device(spi);
+	if(master != NULL) put_device(&master->dev);
 	class_destroy(rc522_class);
 	unregister_chrdev(SPICHAR_MAJOR, rc522_spi_driver.driver.name);
+	printk(KERN_INFO "RC522 Driver: RC522 module is unloaded.\n");
 }
 module_init(rc522_init);
 module_exit(rc522_exit);
